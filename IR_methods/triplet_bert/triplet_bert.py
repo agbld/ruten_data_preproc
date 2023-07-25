@@ -19,6 +19,7 @@ try:
     parser.add_argument('--path_to_activate_item_folder', type=str, default='/mnt/E/Datasets/Ruten/item/activate_item')
     parser.add_argument('--output_folder', type=str, default='./outputs/query_results')
     parser.add_argument('--path_to_queries_file', type=str, default='./outputs/picked_queries_filtered.csv')
+    parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--K', type=int, default=50)
     parser.add_argument('--TOP_N', type=int, default=None)
     parser.add_argument('--N_ROWS', type=int, default=None)
@@ -30,6 +31,7 @@ try:
     path_to_activate_item_folder = args.path_to_activate_item_folder
     output_folder = args.output_folder
     path_to_queries_file = args.path_to_queries_file
+    batch_size = args.batch_size
     K = args.K
     TOP_N = args.TOP_N
     N_ROWS = args.N_ROWS
@@ -41,6 +43,7 @@ except:
     path_to_activate_item_folder = '/mnt/E/Datasets/Ruten/item/activate_item'
     output_folder = './outputs/query_results'
     path_to_queries_file = './outputs/picked_queries_filtered.csv'
+    batch_size = 2048
     K = 50
     # test args
     TOP_N = 10
@@ -58,7 +61,7 @@ selected_queries_filter = pd.read_csv(path_to_queries_file)
 
 query_embeddings = model.encode(
     sentences=selected_queries_filter['query'].tolist(),
-    batch_size=512,
+    batch_size=batch_size,
     normalize_embeddings=True,
     show_progress_bar=True,
 )
@@ -120,6 +123,7 @@ for i in range(len(path_to_item_files)):
         k=K,
         model=model,
         rows=N_ROWS,
+        batch_size=batch_size,
     )
     tmp_df.to_parquet(tmp_output_path, index=False)
     total_results.append(tmp_df)
