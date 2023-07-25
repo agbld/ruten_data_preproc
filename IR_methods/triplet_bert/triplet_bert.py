@@ -4,12 +4,13 @@ import pandas as pd
 import numpy as np
 from torch.cuda.amp import autocast
 import os
+import html
 
 from utils.sentence_transformer_custom import SentenceTransformerCustom
 
-save_model_path = 'E:/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
+save_model_path = '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
 # writer_path = os.path.join(save_model_path, 'eval')
-tokenizer_pretrain_model_path = 'E:/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+tokenizer_pretrain_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
 
 #%%
 # initialize model
@@ -28,14 +29,18 @@ query_embeddings = model.encode(
     show_progress_bar=True,
 )
 
+print('query_embeddings.shape', query_embeddings.shape)
+
 #%%
-# read items file, get embeddings, and return top-k items by dot product.
-# def get_top_k_items(query_embeddings, items_file, k=10):
-items_file = '../../dataset/item/activate_item/part-00006-bf5967a7-8415-4f74-85a8-1a4661ff6f2d-c000.snappy.parquet'
+# read items file, get embeddings.
+items_file = '/mnt/E/Datasets/Ruten/item/activate_item/part-00006-bf5967a7-8415-4f74-85a8-1a4661ff6f2d-c000.snappy.parquet'
 k = 10
 
-items = pd.read_parquet(items_file, columns=['G_NAME'])
+# read items file, get embeddings.
+items = pd.read_parquet(items_file)[:]
+items['G_NAME'] = items['G_NAME'].map(html.unescape)
 
+#%%
 with autocast():
     item_embeddings = model.encode(
         sentences=items['G_NAME'].tolist(),
@@ -44,11 +49,22 @@ with autocast():
         show_progress_bar=True,
     )
 
-item_scores = query_embeddings.dot(item_embeddings.T)
-top_k_idx = item_scores.argsort(axis=1)[:, -k:]
-top_k_scores = item_scores[np.arange(item_scores.shape[0])[:, None], top_k_idx]
-top_k_items = items.iloc[top_k_idx.flatten()].reset_index(drop=True)
-top_k_items['score'] = top_k_scores.flatten()
-# return top_k_items
+print('item_embeddings.shape', item_embeddings.shape)
+
+#%%
+# INPUT: selected_queries_filter['query'].values, query_embeddings, items['G_NAME'].values, item_embeddings
+# RETURN: a dataframe with columns:['query', 'G_NAME', 'score'] from given query. 
+# def get_topk(queries, query_embeddings, items, item_embeddings, k=10):
+
+scores = np.dot(query_embeddings, item_embeddings.T)
+topk_idx = np.argsort(scores, axis=1)[:, ::-1][:, :k]
+topk_scores = np.take_along_axis(scores, topk_idx, axis=1)
+
+results = []
+for i in range(len(selected_queries_filter['query'].values)):
+    for j in range(k):
+        results.append({'query': selected_queries_filter['query'].values[i], 'G_NAME': items['G_NAME'].values[topk_idx[i][j]], 'score': topk_scores[i][j]})
+
+results = pd.DataFrame(results)
 
 #%%
