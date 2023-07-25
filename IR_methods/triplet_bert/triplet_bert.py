@@ -37,12 +37,12 @@ try:
     N_ROWS = args.N_ROWS
 
 except:
-    save_model_path = '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
+    save_model_path = '/mnt/share_disk/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
     # save_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
-    tokenizer_pretrain_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
-    path_to_activate_item_folder = '/mnt/E/Datasets/Ruten/item/activate_item'
-    output_folder = './outputs/query_results'
-    path_to_queries_file = './outputs/picked_queries_filtered.csv'
+    tokenizer_pretrain_model_path = '/mnt/share_disk/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+    path_to_activate_item_folder = '/mnt/share_disk/Datasets/Ruten/item/activate_item'
+    output_folder = './outputs_test/query_results'
+    path_to_queries_file = '../../outputs/picked_queries_filtered.csv'
     batch_size = 2048
     K = 50
     # test args

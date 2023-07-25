@@ -1,3 +1,3 @@
-python ./IR_methods/triplet_bert/triplet_bert.py --save_model_path '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
+python ./IR_methods/triplet_bert/triplet_bert.py --save_model_path '/mnt/share_disk/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus' --tokenizer_pretrain_model_path '/mnt/share_disk/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch' --path_to_activate_item_folder '/mnt/share_disk/Datasets/Ruten/item/activate_item' --batch_size 6000
 
-python ./IR_methods/triplet_bert/triplet_bert.py --save_model_path '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+# python ./IR_methods/triplet_bert/triplet_bert.py --save_model_path '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
