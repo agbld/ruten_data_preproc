@@ -11,6 +11,11 @@ from utils.sentence_transformer_custom import SentenceTransformerCustom
 save_model_path = '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
 # writer_path = os.path.join(save_model_path, 'eval')
 tokenizer_pretrain_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+path_to_activate_item_folder = '/mnt/E/Datasets/Ruten/item/activate_item'
+K = 50
+# test args
+TOP_N = None
+N_ROWS = None
 
 #%%
 # initialize model
@@ -32,39 +37,56 @@ query_embeddings = model.encode(
 print('query_embeddings.shape', query_embeddings.shape)
 
 #%%
-# read items file, get embeddings.
-items_file = '/mnt/E/Datasets/Ruten/item/activate_item/part-00006-bf5967a7-8415-4f74-85a8-1a4661ff6f2d-c000.snappy.parquet'
-k = 10
+# declare get topk fucntion
+def get_topk(queries, query_embeddings, path_to_items_file, k=10, model=model, batch_size=2048, normalize_embeddings=True, show_progress_bar=True, rows=None):
+    if rows is not None:
+        items = pd.read_parquet(path_to_items_file, columns=['G_NAME'])[:rows]
+    else:
+        items = pd.read_parquet(path_to_items_file, columns=['G_NAME'])
+    items['G_NAME'] = items['G_NAME'].map(html.unescape)
 
-# read items file, get embeddings.
-items = pd.read_parquet(items_file)[:]
-items['G_NAME'] = items['G_NAME'].map(html.unescape)
+    with autocast():
+        item_embeddings = model.encode(
+            sentences=items['G_NAME'].tolist(),
+            batch_size=batch_size,
+            normalize_embeddings=normalize_embeddings,
+            show_progress_bar=show_progress_bar,
+        )
+
+    # print('item_embeddings.shape', item_embeddings.shape)
+
+    scores = np.dot(query_embeddings, item_embeddings.T)
+    topk_idx = np.argsort(scores, axis=1)[:, ::-1][:, :k]
+    topk_scores = np.take_along_axis(scores, topk_idx, axis=1)
+
+    results = []
+    for i in range(len(queries)):
+        for j in range(k):
+            results.append({'query': queries[i], 'G_NAME': items['G_NAME'].values[topk_idx[i][j]], 'score': topk_scores[i][j]})
+
+    return pd.DataFrame(results)
 
 #%%
-with autocast():
-    item_embeddings = model.encode(
-        sentences=items['G_NAME'].tolist(),
-        batch_size=2048,
-        normalize_embeddings=True,
-        show_progress_bar=True,
-    )
-
-print('item_embeddings.shape', item_embeddings.shape)
+# get all path of item files. check if the path is .parquet file.
+path_to_item_files = [os.path.join(path_to_activate_item_folder, file) for file in os.listdir(path_to_activate_item_folder) if file.endswith('.parquet')]
+path_to_item_files = path_to_item_files[:TOP_N]
+print(f'\nnumber of item files: {len(path_to_item_files)}')
 
 #%%
-# INPUT: selected_queries_filter['query'].values, query_embeddings, items['G_NAME'].values, item_embeddings
-# RETURN: a dataframe with columns:['query', 'G_NAME', 'score'] from given query. 
-# def get_topk(queries, query_embeddings, items, item_embeddings, k=10):
+total_results = []
+for i in range(len(path_to_item_files)):
+    print(f'\nprocessing file {i+1}/{len(path_to_item_files)} ({path_to_item_files[i].split("/")[-1]})')
+    total_results.append(get_topk(
+        queries=selected_queries_filter['query'].tolist(),
+        query_embeddings=query_embeddings,
+        path_to_items_file=path_to_item_files[i],
+        k=K,
+        model=model,
+        rows=N_ROWS,
+    ))
 
-scores = np.dot(query_embeddings, item_embeddings.T)
-topk_idx = np.argsort(scores, axis=1)[:, ::-1][:, :k]
-topk_scores = np.take_along_axis(scores, topk_idx, axis=1)
-
-results = []
-for i in range(len(selected_queries_filter['query'].values)):
-    for j in range(k):
-        results.append({'query': selected_queries_filter['query'].values[i], 'G_NAME': items['G_NAME'].values[topk_idx[i][j]], 'score': topk_scores[i][j]})
-
-results = pd.DataFrame(results)
+total_results = pd.concat(total_results) 
+total_results = total_results.sort_values(['query', 'score'], ascending=False).groupby('query').head(50)
+total_results.to_csv(f'../../outputs/query_results_{save_model_path.split("/")[-1]}.csv', index=False)
 
 #%%
