@@ -5,17 +5,46 @@ import numpy as np
 from torch.cuda.amp import autocast
 import os
 import html
+from argparse import ArgumentParser
 
 from utils.sentence_transformer_custom import SentenceTransformerCustom
 
-save_model_path = '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
-# writer_path = os.path.join(save_model_path, 'eval')
-tokenizer_pretrain_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
-path_to_activate_item_folder = '/mnt/E/Datasets/Ruten/item/activate_item'
-K = 50
-# test args
-TOP_N = None
-N_ROWS = None
+#%%
+# arg parse
+try:
+    # parse args
+    parser = ArgumentParser()
+    parser.add_argument('--save_model_path', type=str, default=None)
+    parser.add_argument('--tokenizer_pretrain_model_path', type=str, default='/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch')
+    parser.add_argument('--path_to_activate_item_folder', type=str, default='/mnt/E/Datasets/Ruten/item/activate_item')
+    parser.add_argument('--output_folder', type=str, default='./outputs/query_results')
+    parser.add_argument('--path_to_queries_file', type=str, default='./outputs/picked_queries_filtered.csv')
+    parser.add_argument('--K', type=int, default=50)
+    parser.add_argument('--TOP_N', type=int, default=None)
+    parser.add_argument('--N_ROWS', type=int, default=None)
+    args = parser.parse_args()
+    
+    # assign args
+    save_model_path = args.save_model_path
+    tokenizer_pretrain_model_path = args.tokenizer_pretrain_model_path
+    path_to_activate_item_folder = args.path_to_activate_item_folder
+    output_folder = args.output_folder
+    path_to_queries_file = args.path_to_queries_file
+    K = args.K
+    TOP_N = args.TOP_N
+    N_ROWS = args.N_ROWS
+
+except:
+    save_model_path = '/mnt/E/Models/ICL/cw/exp11_ECom-BERT_xbm_batch-hard-loss_train-sm_intent-based-book-neg-2_valid-on-round0-plus'
+    # save_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+    tokenizer_pretrain_model_path = '/mnt/E/Models/ICL/cw/mlm_pre_train_cvc/pc+momo_title+desc/5_epoch'
+    path_to_activate_item_folder = '/mnt/E/Datasets/Ruten/item/activate_item'
+    output_folder = './outputs/query_results'
+    path_to_queries_file = './outputs/picked_queries_filtered.csv'
+    K = 50
+    # test args
+    TOP_N = 10
+    N_ROWS = 1000
 
 #%%
 # initialize model
@@ -25,7 +54,7 @@ model = SentenceTransformerCustom(model_name_or_path=save_model_path,
 
 #%%
 # get query embeddings
-selected_queries_filter = pd.read_csv('../../outputs/selected_queries_filter.csv')
+selected_queries_filter = pd.read_csv(path_to_queries_file)
 
 query_embeddings = model.encode(
     sentences=selected_queries_filter['query'].tolist(),
@@ -76,17 +105,27 @@ print(f'\nnumber of item files: {len(path_to_item_files)}')
 total_results = []
 for i in range(len(path_to_item_files)):
     print(f'\nprocessing file {i+1}/{len(path_to_item_files)} ({path_to_item_files[i].split("/")[-1]})')
-    total_results.append(get_topk(
+    tmp_output_path = output_folder + f'/tmp/query_results__{save_model_path.split("/")[-1]}__{path_to_item_files[i].split("/")[-1].split(".")[0]}.parquet'
+    
+    # check if the ith file is processed. if yes, load the processed file from tmp folder.
+    if os.path.exists(tmp_output_path):
+        tmp_df = pd.read_parquet(tmp_output_path)
+        total_results.append(tmp_df)
+        continue
+        
+    tmp_df = get_topk(
         queries=selected_queries_filter['query'].tolist(),
         query_embeddings=query_embeddings,
         path_to_items_file=path_to_item_files[i],
         k=K,
         model=model,
         rows=N_ROWS,
-    ))
+    )
+    tmp_df.to_parquet(tmp_output_path, index=False)
+    total_results.append(tmp_df)
 
 total_results = pd.concat(total_results) 
 total_results = total_results.sort_values(['query', 'score'], ascending=False).groupby('query').head(50)
-total_results.to_csv(f'../../outputs/query_results_{save_model_path.split("/")[-1]}.csv', index=False)
+total_results.to_csv(os.path.join(output_folder, f'query_results_{save_model_path.split("/")[-1]}.csv'), index=False)
 
 #%%

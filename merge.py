@@ -156,7 +156,7 @@ if __name__ == '__main__':
     
     # save query_item_pairs_df
     print('\nsaving query_item_pairs_df...')
-    query_item_pairs_df.to_parquet(f'{path_to_output_folder}/query_item_pairs.parquet', index=False)
+    query_item_pairs_df.to_parquet(f'{path_to_output_folder}/merged_result.parquet', index=False)
     
     end = time.time()
     print(f'\nTime elapsed: {end - start:.2f} seconds')

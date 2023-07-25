@@ -10,8 +10,8 @@ import numpy as np
 # arg parse
 try:
     parser = ArgumentParser()
-    parser.add_argument('--path', type=str, default='./outputs/query_item_pairs.parquet', help='path to query_item_pairs.parquet')
-    parser.add_argument('--output', type=str, default='./outputs/selected_pairs.csv', help='path to output csv file')
+    parser.add_argument('--path', type=str, default='./outputs/merged_result.parquet', help='path to merged_result.parquet')
+    parser.add_argument('--output', type=str, default='./outputs/picked_queries.csv', help='path to output csv file')
     parser.add_argument('--num_of_parts', type=int, default=10, help='number of parts to split queries')
     parser.add_argument('--num_of_pairs_per_part', type=int, default=100, help='number of pairs to draw per part')
     args = parser.parse_args()
@@ -22,7 +22,7 @@ try:
     NUM_OF_PAIRS_PER_PART = args.num_of_pairs_per_part
 except:
     path_to_query_item_pairs = './outputs/query_item_pairs.parquet'
-    path_to_output = './outputs/selected_queries.csv'
+    path_to_output = './outputs/picked_queries.csv'
     NUM_OF_PARTS = 10
     NUM_OF_PAIRS_PER_PART = 20
     
