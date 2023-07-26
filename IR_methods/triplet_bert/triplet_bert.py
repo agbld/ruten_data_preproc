@@ -21,6 +21,7 @@ try:
     parser.add_argument('--path_to_queries_file', type=str, default='./outputs/picked_queries_filtered.csv')
     parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument('--K', type=int, default=50)
+    parser.add_argument('--BOT_N', type=int, default=None)
     parser.add_argument('--TOP_N', type=int, default=None)
     parser.add_argument('--N_ROWS', type=int, default=None)
     args = parser.parse_args()
@@ -34,6 +35,7 @@ try:
     batch_size = args.batch_size
     K = args.K
     TOP_N = args.TOP_N
+    BOT_N = args.BOT_N
     N_ROWS = args.N_ROWS
 
 except:
@@ -47,6 +49,7 @@ except:
     K = 50
     # test args
     TOP_N = 10
+    BOT_N = None
     N_ROWS = 1000
 
 #%%
@@ -101,7 +104,7 @@ def get_topk(queries, query_embeddings, path_to_items_file, k=10, model=model, b
 #%%
 # get all path of item files. check if the path is .parquet file.
 path_to_item_files = [os.path.join(path_to_activate_item_folder, file) for file in os.listdir(path_to_activate_item_folder) if file.endswith('.parquet')]
-path_to_item_files = path_to_item_files[:TOP_N]
+path_to_item_files = path_to_item_files[-BOT_N:TOP_N]
 print(f'\nnumber of item files: {len(path_to_item_files)}')
 
 #%%
